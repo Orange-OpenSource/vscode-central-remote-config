@@ -1,0 +1,14 @@
+---
+extends: default
+
+ignore: |
+  .cache/
+  node_modules/
+  styles/
+  Taskfile.d/
+  Taskfile.yml
+
+rules:
+  line-length: disable
+  comments:
+    min-spaces-from-content: 1

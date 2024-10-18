@@ -1,0 +1,8 @@
+.cache/
+.vscode-test/
+build/
+dist/
+node_modules/
+out/
+styles/
+*.vsix

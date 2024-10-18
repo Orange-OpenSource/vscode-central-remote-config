@@ -1,0 +1,576 @@
+---
+# https://taskfile.dev
+# @description: A set of tasks to lint different types of files.
+# @tags: lint, docker, CI, CLI
+# @authors: FX Soubirou <soubirou@yahoo.fr>
+# @file-raw: https://gitlab.com/op_so/task/task-templates/-/raw/main/Taskfile.d/lint.yml
+# @file-ui: https://gitlab.com/op_so/task/task-templates/-/blob/main/Taskfile.d/lint.yml
+# @home: https://gitlab.com/op_so/task/task-templates
+# @links: [pre-commit](https://pre-commit.com/)
+# @license: MIT
+# @status: stable
+# @deprecated-tasks: file-utf8
+
+version: '3'
+
+vars:
+  IMAGE_HADOLINT: hadolint/hadolint  # Default image for lint:docker task
+  IMAGE_LYCHEE: lycheeverse/lychee:master  # Default image for lint:lychee task
+  IMAGE_MARKDOWNLINT: davidanson/markdownlint-cli2  # Default image for lint:markdown task
+  IMAGE_PRECOMMIT: jfxs/pre-commit  # Default image for lint:pre-commit task
+  IMAGE_SHELLCHECK: koalaman/shellcheck:stable  # Default image for lint:shellcheck task
+  IMAGE_VALE: jdkato/vale  # Default image for lint:vale task
+  IMAGE_YAMLINT: jfxs/ansible  # Default image for lint:yaml task
+
+tasks:
+
+  all:
+    desc: 'Linter for files, markdown, yaml extensions. Arguments: [FIX|F=y|Y] [MEX|M=\"#node_modules\"] (*)'
+    summary: |
+      [LINT] Linter for files.
+      Usage: task lint:all [FIX|F=<y|Y>] [MEX|M='"#node_modules"']
+
+      Arguments:
+        FIX | F: Fix files (optional, by default no)
+        MEX | M: Makdown exlude directories with single quotes example: MEX='"#node_modules" "#.node_cache"' (see: https://github.com/DavidAnson/markdownlint-cli2)
+
+      Notes:
+        - Only git versionned files are checked for generic files. Use MEX argument for Markdown files and .yamlint for YAML files to exclude.
+        - Check git tracked files.
+        - otherwise (empty git list), all files not in a directory starting by dot
+
+      Requirements:
+        - markdownlint-cli2 or docker
+        - yamllint or docker
+    vars:
+      FIX: '{{default .F .FIX}}'
+      MEX: '{{default .M .MEX}}'
+    cmds:
+      - echo "" && echo "Pre-commit" && echo "=========="
+      - task: pre-commit
+      - echo "" && echo "Markdown:" && echo "========="
+      - task: markdown
+        vars: {GLOB: '"**/*.md" {{.MEX}}'}
+      - echo "" && echo "YAML:" && echo "====="
+      - task: yaml
+      - echo "" && echo "Lychee:" && echo "======="
+      - task: lychee
+      - echo "" && echo "Vale:" && echo "====="
+      - |
+        if [ -e .vale.ini ]
+        then
+          task lint:vale
+        else
+          echo "" && echo "  .vale.ini file not found. Stop Vale" && echo ""
+        fi
+    silent: true
+
+  docker:
+    desc: "Linter for Dockerfiles with hadolint. Arguments: [FILE|F=Dockerfile] [IMG|I=hadolint/hadolint] [PULL|P=n|N] [DOCKER_OPTS|DO=-u 1000:0] (*)"
+    summary: |
+      [LINT] Linter for Dockerfiles with hadolint.
+      Usage: task lint:docker [FILE|F=Dockerfile] [IMG|I=hadolint/hadolint] [PULL|P=<n|N>] [DOCKER_OPTS|DO=<docker_options>]
+
+      Arguments:
+        FILE        | F:   Path of the Docker file to lint (optional, by default Dockerfile)
+        IMG         | I:   Docker lint image to use (optional, by default {{.IMAGE_HADOLINT}})
+        PULL        | P:   Pull docker image (optional, by default yes)
+        DOCKER_OPTS | DO:  Docker options (optional)
+
+      Requirements:
+        - hadolint or docker
+    vars:
+      FILE: '{{.FILE | default .F | default "Dockerfile"}}'
+      IMG: '{{.IMG | default .I}}'
+      IMG_D: '{{.IMG | default .IMAGE_HADOLINT}}'
+      PULL: '{{.PULL | default .P}}'
+      DOCKER_OPTS: '{{.DOCKER_OPTS | default .DO | default ""}}'
+      EXEC: hadolint
+    cmds:
+      - |
+        if (! test -n "{{.IMG}}") && (command -v {{.EXEC}} 2>&1 >/dev/null); then
+          {{.EXEC}} {{.FILE}}
+        else
+          if ! command -v docker 2>&1 >/dev/null; then
+            echo "docker and {{.EXEC}} are not installed!" && exit 1
+          fi
+          if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMG_D}}"; fi
+          docker run {{.DOCKER_OPTS}} -t --rm -v $(pwd):/mnt "{{.IMG_D}}" {{.EXEC}} /mnt/{{.FILE}}
+        fi
+    silent: true
+
+  file:
+    desc: "Linter for files. Arguments: [FIX|F=y|Y] (*)"
+    summary: |
+      [LINT] Linter for files.
+      Usage: task lint:file [FIX|F=<y|Y>]
+
+      Arguments:
+        FIX | F:  Fix files (optional, by default no)
+
+      Notes:
+        - Check git tracked files,
+        - otherwise (empty git list), all files not in a directory starting by dot
+
+    vars:
+      FIX: '{{.FIX | default .F}}'
+    cmds:
+      - task: file-utf8
+      - task: file-cr
+        vars: {FIX: "{{.FIX}}"}
+      - task: file-tws
+        vars: {FIX: "{{.FIX}}"}
+      - task: file-nleof
+    silent: true
+
+  file-cr:
+    # desc: "Linter CR (Carriage Return). Arguments: [FIX|F=y|Y] (*)"
+    # summary: |
+    #   [LINT] Linter CR (Carriage Return).
+    #   Usage: task lint:file-cr [FIX|F=<y|Y>]
+    #
+    #   Arguments:
+    #     FIX | F  Fix files (optional, by default no)
+    #
+    #   Notes:
+    #    - Only git tracked files are checked,
+    #    - add "# Exclude" to lines you want to exclude from lint.
+    vars:
+      FIX: '{{.FIX | default .F}}'
+      GREP_RE: "\r"  # Exclude
+      SED_RE: "\r"  # Exclude
+      DESC: "CR (Carriage Return)"
+    cmds:
+      - task: find-remove
+        vars: {GREP: "{{.GREP_RE}}", SED: "{{.SED_RE}}", DESC: "{{.DESC}}", FIX: "{{.FIX}}"}
+    silent: true
+
+  file-nleof:
+    # desc: "Linter for one new line at the end of a file. Arguments: [FIX|F=y|Y] (*)"
+    # summary: |
+    #   [LINT] Linter for one new line at the end of a file.
+    #   Usage: task lint:file-nleof [FIX|F=<y|Y>]
+    #
+    #   Arguments:
+    #     FIX | F  Fix files (optional, by default no)
+    #
+    #   Notes:
+    #    - Check git tracked files,
+    #    - otherwise (empty git list), all files not in a directory starting by dot
+    cmds:
+      - git ls-files > ls-files.tmp || true
+      - if [ ! -s "ls-files.tmp" ]; then find . -not -path './.*/*' -type f > ls-files.tmp; fi
+      - defer: rm -f ls-files.tmp
+      - |
+        count_all=0
+        count_ko=0
+        while read -r line
+        do
+          # File exists in local
+          if [ -e "$line" ]; then
+            format=$(file -b --mime-encoding "$line")
+            is_binary=$(echo "$format" | grep -c binary || true)
+            # If text file
+            if [ "$is_binary" = "0" ]; then
+              count_all=$((count_all+1))
+              # Get 2 last char | no adresse, write all input data, specify output format
+              end_file=$(tail -c 2 "$line" | od -An -v -tc)
+              char1=$(echo "$end_file" | awk '{print $1}')
+              char2=$(echo "$end_file" | awk '{print $2}')
+              if [ "$char2" = "\n" ]; then
+                if [ "$char1" = "\n" ]; then
+                printf "%s has more than one newline at the end of the file!\n" "$line"
+                count_ko=$((count_ko+1))
+                fi
+              else
+                printf "%s has no newline at the end of the file!\n" "$line"
+                count_ko=$((count_ko+1))
+              fi
+            fi
+          fi
+        done < ls-files.tmp
+        if [ "$count_ko" = "0" ]; then
+            printf "\033[0;32m[OK] All %s text files have an empty line at the end of file.\033[0m\n" "$count_all"
+        else
+          printf "\033[0;31m[KO] %s text files have not exactly one empty line at the end of file!\033[0m\n" "$count_ko"
+        fi
+        exit "$count_ko"
+    silent: true
+
+  file-tws:
+    # desc: "Linter for trailing whitespaces at the end of a line. Arguments: [FIX|F=y|Y] (*)"
+    # summary: |
+    #   [LINT] Linter trailing whitespace line at the end of a line.
+    #   Usage: task lint:file-tws [FIX|F=<y|Y>]
+    #
+    #   Arguments:
+    #     FIX | F  Fix files (optional, by default no)
+    #
+    #   Notes:
+    #    - Only git tracked files are checked,
+    #    - add "# Exclude" to lines you want to exclude from lint.
+    vars:
+      FIX: '{{.FIX | default .F}}'
+      GREP_RE: "[[:space:]]$"  # Exclude
+      SED_RE: "[[:space:]]*$"  # Exclude
+      DESC: "trailing whitespaces at the end of line(s)"
+    cmds:
+      - task: find-remove
+        vars: {GREP: "{{.GREP_RE}}", SED: "{{.SED_RE}}", DESC: "{{.DESC}}", FIX: "{{.FIX}}"}
+    silent: true
+
+  file-utf8:
+    # desc: "Check if text files are utf-8 encoded. (*)"
+    # summary: |
+    #   [LINT] Check if text files are utf-8 encoded.
+    #   Usage: task lint:file-utf8
+    #
+    #   Notes:
+    #    - Check files
+    cmds:
+      - git ls-files > ls-files.tmp || true
+      - if [ ! -s "ls-files.tmp" ]; then find . -not -path './.*/*' -type f > ls-files.tmp; fi
+      - defer: rm -f ls-files.tmp
+      - |
+        count_all=0
+        count_ko=0
+        while read -r line; do
+          # File exists in local
+          if [ -e "$line" ]; then
+            format=$(file -b --mime-encoding "$line")
+            is_binary=$(echo "$format" | grep -c binary || true)
+            # If text file
+            if [ "$is_binary" = "0" ]; then
+              count_all=$((count_all+1))
+              if ! iconv -f utf8 -t utf8 < "$line" >/dev/null 2>&1; then
+                printf "%s is not in UTF-8 format, probably %s!\n" "$line" "$format"
+                count_ko=$((count_ko+1))
+              fi
+            fi
+          fi
+        done < ls-files.tmp
+        if [ "$count_ko" = "0" ]; then
+            printf "\033[0;32m[OK] All %s text files are UTF-8 encoded.\033[0m\n" "$count_all"
+        else
+          printf "\033[0;31m[KO] %s text files are not in UTF-8 format!\033[0m\n" "$count_ko"
+        fi
+        exit "$count_ko"
+    preconditions:
+      - sh: command -v git
+        msg: "git is not installed"
+    silent: true
+
+  lychee:
+    desc: "Find broken hyperlinks with lychee. Arguments: [ARGS|A='.'] [IMG|I=lycheeverse/lychee] [PULL|P=n|N] [DOCKER_OPTS|DO=-u 1000:0] (*)"
+    summary: |
+      [LINT] Find broken hyperlinks.
+      Usage: task lint:lychee [ARGS|A='.'] [IMG|I=lycheeverse/lychee] [PULL|P=<n|N>] [DOCKER_OPTS|DO=<docker_options>]
+
+      Arguments:
+        ARGS        | A:   Glob expressions (optional, by default ".")
+        IMG         | I:   lychee image to use (optional, by default {{.IMAGE_LYCHEE}})
+        PULL        | P:   Pull docker image (optional, by default yes)
+        DOCKER_OPTS | DO:  Docker options (optional)
+
+      Notes:
+        - To exclude directories create a lychee.toml file with the exclude_path = ["dir1", "dir2"] directive
+        - Documentation: https://github.com/lycheeverse/lychee
+
+      Requirements:
+        - lychee or docker
+    vars:
+      ARGS: '{{.ARGS | default .A | default "."}}'
+      IMG: '{{.IMG | default .I}}'
+      IMG_D: '{{.IMG | default .IMAGE_LYCHEE}}'
+      PULL: '{{.PULL | default .P}}'
+      DOCKER_OPTS: '{{.DOCKER_OPTS | default .DO | default ""}}'
+      EXEC: lychee
+    cmds:
+      - |
+        if (! test -n "{{.IMG}}") && (command -v {{.EXEC}} 2>&1 >/dev/null); then
+          {{.EXEC}} {{.ARGS}}
+        else
+          if ! command -v docker 2>&1 >/dev/null; then
+            echo "docker and {{.EXEC}} are not installed!" && exit 1
+          fi
+          if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMG_D}}"; fi
+          docker run {{.DOCKER_OPTS}} -t --rm -w /input -v $(pwd):/input "{{.IMG_D}}" {{.ARGS}}
+        fi
+    silent: true
+
+  markdown:
+    desc: "Linter for Mardown files. Arguments: [GLOB|G='\"**/*.md\"'] [IMG|I=tmknom/markdownlint] [PULL|P=n|N] [DOCKER_OPTS|DO=-u 1000:0] (*)"
+    summary: |
+      [LINT] Linter for Markdown files.
+      Usage: task lint:markdown [GLOB|G='"**/*.md" "#node_modules"'] [IMG|I=tmknom/markdownlint] [PULL|P=<n|N>] [DOCKER_OPTS|DO=<docker_options>]
+
+      Arguments:
+        GLOB        | G:   Glob expressions (optional, by default "**/*.md")
+        IMG         | I:   Docker markdownlint image to use (optional, by default {{.IMAGE_MARKDOWNLINT}})
+        PULL        | P:   Pull docker image (optional, by default yes)
+        DOCKER_OPTS | DO:  Docker options (optional)
+
+      Notes:
+        - Documentation of Glob expressions: https://github.com/DavidAnson/markdownlint-cli2
+
+      Requirements:
+        - markdownlint-cli2 or docker
+    vars:
+      GLOB: '{{.GLOB | default .G | default "\"**/*.md\""}}'
+      IMG: '{{.IMG | default .I}}'
+      IMG_D: '{{.IMG | default .IMAGE_MARKDOWNLINT}}'
+      PULL: '{{.PULL | default .P}}'
+      DOCKER_OPTS: '{{.DOCKER_OPTS | default .DO | default ""}}'
+      EXEC: markdownlint-cli2
+    cmds:
+      - |
+        if (! test -n "{{.IMG}}") && (command -v {{.EXEC}} 2>&1 >/dev/null); then
+          {{.EXEC}} {{.GLOB}}
+        else
+          if ! command -v docker 2>&1 >/dev/null; then
+            echo "docker and {{.EXEC}} are not installed!" && exit 1
+          fi
+          if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMG_D}}"; fi
+          docker run {{.DOCKER_OPTS}} -t --rm -v $(pwd):/workdir "{{.IMG_D}}" {{.GLOB}}
+        fi
+    silent: true
+
+  pre-commit:
+    desc: "Lint with pre-commit framework. Arguments: [IMG|I=jfxs/pre-commit] [PULL|P=n|N] [DIR|D=.] [DOCKER_OPTS|DO=-u 1000:0] (*)"
+    summary: |
+      [LINT] Lint with pre-commit framework.
+      Usage: task lint:pre-commit [IMG|I=jfxs/pre-commit] [PULL|P=<n|N>] [DIR|D=<directory>] [DOCKER_OPTS|DO=<docker_options>]
+
+      Arguments:
+        IMG         | I:   Docker pre-commit image to use (optional, by default {{.IMAGE_PRECOMMIT}})
+        PULL        | P:   Pull pre-commit image (optional, by default yes)
+        DIR         | D:   Directory to run pre-commit (optional, by default .)
+        DOCKER_OPTS | DO:  Docker options (optional)
+
+      Notes:
+        - Documentation of pre-commit: https://pre-commit.com/
+
+      Requirements:
+        - pre-commit or docker
+    vars:
+      IMG: '{{.IMG | default .I}}'
+      IMG_D: '{{.IMG | default .IMAGE_PRECOMMIT}}'
+      PULL: '{{.PULL | default .P}}'
+      DIR: '{{.DIR | default .D | default "."}}'
+      DOCKER_OPTS: '{{.DOCKER_OPTS | default .DO | default ""}}'
+      EXEC: pre-commit
+      CMD: export PRE_COMMIT_HOME={{.DIR}}/.cache/pre-commit && cd {{.DIR}} && pre-commit run --all-files
+      PRE_COMMIT_CONFIG_DEFAULT: |
+        ---
+        repos:
+          - repo: https://github.com/pre-commit/pre-commit-hooks
+            rev: v4.5.0
+            hooks:
+              - id: trailing-whitespace
+              - id: end-of-file-fixer
+              - id: check-yaml
+              - id: check-added-large-files
+              # Hooks added from sample-config
+              - id: check-executables-have-shebangs
+              - id: check-json
+              - id: check-merge-conflict
+              - id: check-shebang-scripts-are-executable
+              - id: check-symlinks
+              - id: check-toml
+              - id: check-xml
+              - id: detect-private-key
+              - id: end-of-file-fixer
+              - id: fix-byte-order-marker
+              - id: mixed-line-ending
+              - id: trailing-whitespace
+                args: [--markdown-linebreak-ext=md]
+    cmds:
+      - if [ ! -f "{{.DIR}}/.pre-commit-config.yaml" ]; then echo -n "{{.PRE_COMMIT_CONFIG_DEFAULT}}" > "{{.DIR}}/.pre-commit-config.yaml" && printf "\033[0;32mConfig file \"%s\" is created.\033[0m\n" ".pre-commit-config.yaml"; fi
+      - |
+        if (! test -n "{{.IMG}}") && (command -v {{.EXEC}} 2>&1 >/dev/null); then
+          {{.CMD}}
+        else
+          if ! command -v docker 2>&1 >/dev/null; then
+            echo "docker and {{.EXEC}} are not installed!" && exit 1
+          fi
+          if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMG_D}}"; fi
+          docker run {{.DOCKER_OPTS}} -t --rm -v $(pwd):/workdir "{{.IMG_D}}" /bin/bash -c "{{.CMD}}"
+        fi
+    silent: true
+
+  shell:
+    desc: "Linter for bash/sh shell files. Arguments: FILES|F=\"myscripts/*.sh\" [IMG|I=koalaman/shellcheck:stable] [PULL|P=n|N] [DOCKER_OPTS|DO=-u 1000:0] (*)"
+    summary: |
+      [LINT] Linter for bash/sh shell files.
+      If shellcheck command is in the path and IMG/I argument is not set, the local shellcheck command is executed,
+      otherwise a shellcheck Docker image is used.
+      Usage: task lint:shell FILES|F="myscripts/*.sh" [IMG|I=<koalaman/shellcheck:stable>] [PULL|P=<n|N>] [DOCKER_OPTS|DO=<docker_options>]
+
+      Arguments:
+        FILES       | F:   Files to check (required)
+        IMG         | I:   Docker shellcheck image to use (optional, by default {{.IMAGE_SHELLCHECK}})
+        PULL        | P:   Pull docker image (optional, by default yes)
+        DOCKER_OPTS | DO:  Docker options (optional)
+
+      Requirements:
+        - shellcheck or docker
+    vars:
+      FILES: '{{.FILES | default .F}}'
+      IMG: '{{.IMG | default .I}}'
+      IMG_D: '{{.IMG | default .IMAGE_SHELLCHECK}}'
+      PULL: '{{.PULL | default .P}}'
+      DOCKER_OPTS: '{{.DOCKER_OPTS | default .DO | default ""}}'
+      EXEC: shellcheck
+    cmds:
+      - |
+        if (! test -n "{{.IMG}}") && (command -v {{.EXEC}} 2>&1 >/dev/null); then
+          {{.EXEC}} {{.FILES}}
+        else
+          if ! command -v docker 2>&1 >/dev/null; then
+            echo "docker and {{.EXEC}} are not installed!" && exit 1
+          fi
+          if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMG_D}}"; fi
+          docker run {{.DOCKER_OPTS}} -t --rm -v $(pwd):/mnt "{{.IMG_D}}" {{.FILES}}
+        fi
+    preconditions:
+      - sh: test -n "{{.FILES}}"
+        msg: "FILES|F argument is required"
+    silent: true
+
+  vale:
+    desc: "Linter for grammar, style, and word usage English language. Arguments: [FILES|F=\"*.md\"] [STYLES|S=\"styles\"] [IMG|I=jdkato/vale] [PULL|P=n|N] [DOCKER_OPTS|DO=-u 1000:0] (*)"
+    summary: |
+      [LINT] Linter for Linter for a grammar, style, and word usage English language.
+      If vale command is in the path and IMG/I argument is not set, the local vale command is executed,
+      otherwise a Vale Docker image is used.
+      You must create a .vale.ini configuration file and vale sync is automatically run:
+      https://vale.sh/generator
+      Usage: task lint:vale [FILES|F=\"*.md\"] [STYLES|S=\"styles\"] [IMG|I=jdkato/vale] [PULL|P=<n|N>] [DOCKER_OPTS|DO=<docker_options>]
+
+      Arguments:
+        FILES       | F:   Files to check (optional, by default *.md)
+        STYLES      | S:   Styles directory (optional, by default styles)
+        IMG         | I:   Docker vale image to use (optional, by default {{.IMAGE_VALE}})
+        PULL        | P:   Pull docker image (optional, by default yes)
+        DOCKER_OPTS | DO:  Docker options (optional)
+
+      Requirements:
+        - vale or docker
+    vars:
+      FILES: '{{.FILES | default .F | default "*.md"}}'
+      STYLES: '{{.STYLES | default .S | default "styles"}}'
+      IMG: '{{.IMG | default .I}}'
+      IMG_D: '{{.IMG | default .IMAGE_VALE}}'
+      PULL: '{{.PULL | default .P}}'
+      DOCKER_OPTS: '{{.DOCKER_OPTS | default .DO | default ""}}'
+      EXEC: vale
+    cmds:
+      - mkdir -p {{.STYLES}}
+      - |
+        if (! test -n "{{.IMG}}") && (command -v {{.EXEC}} 2>&1 >/dev/null); then
+          {{.EXEC}} sync && {{.EXEC}} {{.FILES}}
+        else
+          if ! command -v docker 2>&1 >/dev/null; then
+            echo "docker and {{.EXEC}} are not installed!" && exit 1
+          fi
+          if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then
+            docker pull "{{.IMG_D}}"
+            docker run {{.DOCKER_OPTS}} -t --rm -v $(pwd):/docs -w /docs "{{.IMG_D}}" sync
+          fi
+          docker run {{.DOCKER_OPTS}} -t --rm -v $(pwd):/docs -w /docs "{{.IMG_D}}" {{.FILES}}
+        fi
+    silent: true
+
+  yaml:
+    desc: "Linter for YAML files. Arguments: [FILES|F=\".\"] [IMG|I=jfxs/ansible] [PULL|P=n|N] [DOCKER_OPTS|DO=-u 1000:0] (*)"
+    summary: |
+      [LINT] Linter for YAML files.
+      If yamllint command is in the path and IMG/I argument is not set, the local yamllint command is executed,
+      otherwise a yamllint Docker image is used.
+      You can configure rules and exclude directories with a .yamlint configuration file:
+      https://yamllint.readthedocs.io/en/stable/configuration.html
+      Usage: task lint:yaml [FILES|F=\".\"] [IMG|I=jfxs/ansible] [PULL|P=<n|N>] [DOCKER_OPTS|DO=<docker_options>]
+
+      Arguments:
+        FILES       | F:   Files to check (optional, by default .)
+        IMG         | I:   Docker yamllint image to use (optional, by default {{.IMAGE_YAMLINT}})
+        PULL        | P:   Pull docker image (optional, by default yes)
+        DOCKER_OPTS | DO:  Docker options (optional)
+
+      Requirements:
+        - yamllint or docker
+    vars:
+      FILES: '{{.FILES | default .F | default "."}}'
+      IMG: '{{.IMG | default .I}}'
+      IMG_D: '{{.IMG | default .IMAGE_YAMLINT}}'
+      PULL: '{{.PULL | default .P}}'
+      DOCKER_OPTS: '{{.DOCKER_OPTS | default .DO | default ""}}'
+      EXEC: yamllint
+    cmds:
+      - |
+        if (! test -n "{{.IMG}}") && (command -v {{.EXEC}} 2>&1 >/dev/null); then
+          {{.EXEC}} {{.FILES}}
+        else
+          if ! command -v docker 2>&1 >/dev/null; then
+            echo "docker and {{.EXEC}} are not installed!" && exit 1
+          fi
+          if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMG_D}}"; fi
+          docker run {{.DOCKER_OPTS}} -t --rm -v $(pwd):/ansible "{{.IMG_D}}" {{.EXEC}} {{.FILES}}
+        fi
+    silent: true
+
+  find-remove:
+    vars:
+      EXCLUDE_PATTERN: "# Exclude"
+      FILE_FR: "{{.TASK}}.tmp"
+    cmds:
+      - |
+        if git status -s 2>&1 >/dev/null; then
+          git grep -nIE "$(printf '{{.GREP}}')" | grep -v "{{.EXCLUDE_PATTERN}}" > {{.FILE_FR}} || true;
+        else
+          echo "[WARNING] - git error"
+          touch {{.FILE_FR}}
+        fi
+      # TODO Find a shell script which find CR
+      # - if [ ! -f "{{.FILE_FR}}" ]; then find . -not -path './.*/*' -type f -exec grep -nHI -e "$(printf '{{.GREP}}')" {} \; | grep -v "{{.EXCLUDE_PATTERN}}" > {{.FILE_FR}}; fi
+      - defer: rm -f {{.FILE_FR}}
+      - |
+        count=$(wc -l < {{.FILE_FR}} | awk '{print $1}')
+        if [ "$count" = "0" ]; then
+          printf "\033[0;32m[OK] No file with %s found.\033[0m\n" "{{.DESC}}"
+        else
+          printf "\033[0;31m[KO] %s %s found:\033[0m\n" "$count" "{{.DESC}}"
+          if [ "{{.FIX}}" = "y" ] || [ "{{.FIX}}" = "Y" ]; then
+            files=""
+            while read -r line; do
+              # Get file name only
+              file=$(printf "%s" "$line" | sed -E 's/:[0-9]+:.*//')
+              # Set list with EOL separator
+              if [ -z "$files" ]; then
+                files="$file"
+              else
+                files=$(printf "%s\n%s" "$files" "$file")
+              fi
+            done < {{.FILE_FR}}
+            # Remove duplicate filename
+            uniq_files=$(printf "%s" "$files" | uniq)
+            printf "%s" "$uniq_files" | while read -r line ; do
+              sed -i.bu -E '/.*{{.EXCLUDE_PATTERN}}.*/!s/{{.SED}}//' "$line"
+              rm -f "$line.bu"
+              printf "\033[0;32mFile %s fixed\033[0m\n" "$line"
+            done
+          else
+            cat {{.FILE_FR}}
+          fi
+        fi
+        exit "$count"
+    preconditions:
+      - sh: command -v git
+        msg: "git is not installed"
+      - sh: test -n "{{.GREP}}"
+        msg: "GREP argument is required"
+      - sh: test -n "{{.SED}}"
+        msg: "SED argument is required"
+      - sh: test -n "{{.DESC}}"
+        msg: "DESC argument is required"
+    silent: true

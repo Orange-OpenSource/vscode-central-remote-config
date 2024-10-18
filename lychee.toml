@@ -1,0 +1,2 @@
+exclude_path = [".cache", "node_module"]
+exclude = [ 'https://code.visualstudio.com\.*' ]

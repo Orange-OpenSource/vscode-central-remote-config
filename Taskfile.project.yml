@@ -1,0 +1,32 @@
+---
+# https://taskfile.dev
+#
+# Taskfile.project.yml for your main project tasks. Must be commited.
+# If you always want the last version of the task templates, add the following line in your .gitignore file
+# /Taskfile.d/
+#
+version: '3'
+
+vars:
+  # TO MODIFY: Task templates to download separated by comma
+  # Example: TASK_TEMPLATES: go,lint,yarn
+  TASK_TEMPLATES: git,lint
+
+tasks:
+
+  00-get-list-templates:
+    # Get the list of templates to download
+    # Do not remove
+    cmds:
+      - echo "{{.TASK_TEMPLATES}}"
+    silent: true
+
+  # Task example with TASK_TEMPLATES: lint
+  10-pre-commit:
+    desc: "[PROJECT] Pre-commit checks."
+    cmds:
+      - date > {{.FILE_TASK_START}}
+      - defer: rm -f {{.FILE_TASK_START}}
+      - task lint:all MEX='"#node_modules" "#.cache"'
+      - echo "Checks Start $(cat {{.FILE_TASK_START}}) - End $(date)"
+    silent: true

@@ -1,0 +1,20 @@
+{
+  "name": "Node.js & TypeScript",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:latest",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": { "zsh": { "path": "/bin/zsh" } }
+      },
+      "extensions": [
+        "mk12.better-git-line-blame",
+        "connor4312.esbuild-problem-matchers",
+        "dbaeumer.vscode-eslint",
+        "pmneo.tsimporter",
+        "esbenp.prettier-vscode",
+        "gruntfuggly.todo-tree"
+      ]
+    }
+  }
+}

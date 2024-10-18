@@ -1,0 +1,87 @@
+{
+  "name": "vscode-central-remote-config",
+  "icon": "crc_icon.png",
+  "displayName": "VSCode CRC: central-remote-config",
+  "description": "An extension to set the configuration of the Continue extension from a remote server",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.tech.orange/orama/vscode-central-remote-config"
+  },
+  "version": "0.0.0",
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "crc",
+      "properties": {
+        "crc.remoteEndPoint": {
+          "type": "string",
+          "default": "",
+          "description": "The remote Continue configuration endpoint."
+        },
+        "crc.configLabel": {
+          "type": "string",
+          "default": "default.json",
+          "description": "The remote Continue configuration filename."
+        },
+        "crc.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "The API key [Optional]."
+        },
+        "crc.continueDirectory": {
+          "type": "string",
+          "default": ".continue",
+          "description": "The continue directory."
+        },
+        "crc.apiKeyPattern": {
+          "type": "string",
+          "default": "__CRC_API_KEY__",
+          "description": "The API key pattern possibly defined in the remote configuration file."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "central-remote-config.load",
+        "title": "CRC: load extension"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.0.0",
+    "@types/mocha": "^10.0.9",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.94.0",
+    "@typescript-eslint/eslint-plugin": "^8.7.0",
+    "@typescript-eslint/parser": "^8.7.0",
+    "chai": "^5.1.1",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.11.1",
+    "mocha": "^10.7.3",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.6.2"
+  }
+}

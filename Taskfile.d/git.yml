@@ -1,0 +1,145 @@
+---
+# https://taskfile.dev
+# @description: Two tasks to sign commits and use commitizen without pre-requisites.
+# @tags: git, docker, CLI
+# @authors: FX Soubirou <soubirou@yahoo.fr>
+# @file-raw: https://gitlab.com/op_so/task/task-templates/-/raw/main/Taskfile.d/git.yml
+# @file-ui: https://gitlab.com/op_so/task/task-templates/-/blob/main/Taskfile.d/git.yml
+# @home: https://gitlab.com/op_so/task/task-templates
+# @links: [Commitizen](https://github.com/commitizen/cz-cli)
+# @license: MIT
+# @status: stable
+# @deprecated-tasks:
+
+version: '3'
+
+vars:
+  IMAGE_DEFAULT: jfxs/commitizen-semantic-release:latest  # Default image
+  DOCKER_EXEC_OPTS: ""  # Optional Docker options for docker exec command
+  DOCKER_RUN_OPTS: ""  # Optional Docker options for docker run command
+
+tasks:
+
+  signed-commit:
+    desc: "Signed commit. Arguments: KEY_PATH|K=key_full_path MESSAGE|M=message [OPTION|O=\"--amend\"] [PULL|P=n|N] (*)"
+    summary: |
+      [GIT] Signed commit.
+      Usage: task git:signed-commit KEY_PATH|K=<key_full_path> MESSAGE|M=<message> [OPTION|O=\"<options>\"] [PULL|P=<n|N>]
+
+      Prerequisites:
+        - Run command: git config user.name "your name"
+        - Run command: git config user.email "your_email@example.com"
+        - Run command: git config user.signingkey XXXX
+        - Run command: git config commit.gpgsign true
+
+      Arguments:
+        KEY_PATH | K:  Absolute path to the private key file (required)
+        MESSAGE  | M:  Commit message (required)
+        OPTIONS  | O:  Git options (optional, by default -S --signoff)
+        PULL     | P:  Pull docker image (optional, by default yes)
+
+      Requirements:
+        - docker
+    vars:
+      KEY_MOUNT_POINT: /Private
+      SRC_MOUNT_POINT: /data
+      KEY_PATH: '{{.KEY_PATH | default .K}}'
+      MESSAGE: '{{.MESSAGE | default .M}}'
+      OPTIONS: '{{.OPTIONS | default .O | default "-S --signoff"}}'
+      PULL: '{{.PULL | default .P}}'
+      KEY_PATH_DIR:
+        sh: dirname "{{.KEY_PATH}}"
+      KEY_NAME:
+        sh: basename "{{.KEY_PATH}}"
+    cmds:
+      - if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMAGE_DEFAULT}}"; fi
+      - docker run {{.DOCKER_RUN_OPTS}} -d --name commit -v "{{.KEY_PATH_DIR}}:{{.KEY_MOUNT_POINT}}" -v $(pwd):"{{.SRC_MOUNT_POINT}}" "{{.IMAGE_DEFAULT}}" sleep infinity
+      - defer: echo "Waiting for the container to stop..." && docker stop commit && docker rm commit
+      - docker exec {{.DOCKER_EXEC_OPTS}} -it commit /bin/sh -c 'export GPG_TTY=$(tty); gpg --batch --import "{{.KEY_MOUNT_POINT}}/{{.KEY_NAME}}"'
+      - docker exec {{.DOCKER_EXEC_OPTS}} -it commit /bin/sh -c 'export GPG_TTY=$(tty); git commit {{.OPTIONS}} -m "{{.MESSAGE}}"'
+      - echo "Signed commit succeeded!"
+    preconditions:
+      - sh: command -v docker
+        msg: "docker is not installed"
+      - sh: test -n "{{.KEY_PATH}}"
+        msg: "KEY_PATH|K argument is required"
+      - sh: test -n "{{.MESSAGE}}"
+        msg: "MESSAGE|M argument is required"
+    silent: true
+
+  signed-commit-amend:
+    desc: "Amend a previous signed commit. Arguments: KEY_PATH|K=key_full_path [PULL|P=n|N] (*)"
+    summary: |
+      [GIT] Signed commit.
+      Usage: task git:signed-commit KEY_PATH|K=<key_full_path> [PULL|P=<n|N>]
+
+      Arguments:
+        KEY_PATH | K:  Absolute path to the private key file (required)
+        PULL     | P:  Pull docker image (optional, by default yes)
+
+      Requirements:
+        - docker
+    vars:
+      KEY_MOUNT_POINT: /Private
+      SRC_MOUNT_POINT: /data
+      KEY_PATH: '{{.KEY_PATH | default .K}}'
+      MESSAGE: '{{.MESSAGE | default .M}}'
+      OPTIONS: '{{.OPTIONS | default .O | default "-S --signoff"}}'
+      PULL: '{{.PULL | default .P}}'
+      KEY_PATH_DIR:
+        sh: dirname "{{.KEY_PATH}}"
+      KEY_NAME:
+        sh: basename "{{.KEY_PATH}}"
+    cmds:
+      - if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMAGE_DEFAULT}}"; fi
+      - docker run {{.DOCKER_RUN_OPTS}} -d --name commit -v "{{.KEY_PATH_DIR}}:{{.KEY_MOUNT_POINT}}" -v $(pwd):"{{.SRC_MOUNT_POINT}}" "{{.IMAGE_DEFAULT}}" sleep infinity
+      - defer: echo "Waiting for the container to stop..." && docker stop commit && docker rm commit
+      - docker exec {{.DOCKER_EXEC_OPTS}} -it commit /bin/sh -c 'export GPG_TTY=$(tty); gpg --batch --import "{{.KEY_MOUNT_POINT}}/{{.KEY_NAME}}"'
+      - docker exec {{.DOCKER_EXEC_OPTS}} -it commit /bin/sh -c 'export GPG_TTY=$(tty); git commit -S --signoff --amend --no-edit'
+      - echo "Signed commit amended!"
+    preconditions:
+      - sh: command -v docker
+        msg: "docker is not installed"
+      - sh: test -n "{{.KEY_PATH}}" || test -n "{{.K}}"
+        msg: "KEY_PATH|K argument is required"
+    silent: true
+
+  commitizen:
+    desc: "Signed commit with Commitizen. Arguments: KEY_PATH|K=key_full_path [PULL|P=n|N] (*)"
+    summary: |
+      [GIT] Signed commit with Commitizen.
+      Usage: task git:commit KEY_PATH|K=<key_full_path> [PULL|P=<n|N>]
+
+      Prerequisites:
+        - Run command: git config user.signingkey XXXX
+        - Run command: git config commit.gpgsign true
+
+      Arguments:
+        KEY_PATH | K:  Absolute path to the private key file (required)
+        PULL     | P:  Pull docker image (optional, by default yes)
+
+      Requirements:
+        - docker
+    vars:
+      KEY_MOUNT_POINT: /Private
+      SRC_MOUNT_POINT: /data
+      KEY_PATH: '{{.KEY_PATH | default .K}}'
+      PULL: '{{.PULL | default .P}}'
+      KEY_PATH_DIR:
+        sh: dirname "{{.KEY_PATH}}"
+      KEY_NAME:
+        sh: basename "{{.KEY_PATH}}"
+    cmds:
+      - if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMAGE_DEFAULT}}"; fi
+      - docker run {{.DOCKER_RUN_OPTS}} -d --name commit -v "{{.KEY_PATH_DIR}}:{{.KEY_MOUNT_POINT}}" -v $(pwd):"{{.SRC_MOUNT_POINT}}" "{{.IMAGE_DEFAULT}}" sleep infinity
+      - defer: echo "Waiting for the container to stop..." && docker stop commit && docker rm commit
+      - docker exec {{.DOCKER_EXEC_OPTS}} -it commit /bin/sh -c 'export GPG_TTY=$(tty); gpg --batch --import "{{.KEY_MOUNT_POINT}}/{{.KEY_NAME}}"'
+      - docker exec {{.DOCKER_EXEC_OPTS}} -it commit /bin/sh -c 'export GPG_TTY=$(tty); cz --signoff'
+      - echo "Signed commit succeeded!"
+    preconditions:
+      - sh: command -v docker
+        msg: "docker is not installed"
+      - sh: test -n "{{.KEY_PATH}}"
+        msg: "KEY_PATH|K argument is required"
+    interactive: true
+    silent: true
