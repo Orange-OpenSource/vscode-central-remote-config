@@ -3,6 +3,8 @@
   "icon": "crc_icon.png",
   "displayName": "VSCode CRC: central-remote-config",
   "description": "An extension to set the configuration of the Continue extension from a remote server",
+  "publisher": "orange-ospc",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://gitlab.tech.orange/orama/vscode-central-remote-config"
