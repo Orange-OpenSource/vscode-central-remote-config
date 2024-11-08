@@ -6,11 +6,11 @@ include:
 variables:
   IMAGE_NODE: node:22-bookworm
   IMAGE_NODE_GL_RELEASE: jfxs/commitizen-semantic-release:latest
+  OS_REPOSITORY_URL: https://github.com/fxsoubirou/vscode-central-remote-config
 
 stages:
   - lint
   - version
-  - tests
   - build
   - gitlab-release
 
@@ -23,6 +23,7 @@ version:
   image: $IMAGE_NODE_GL_RELEASE
   stage: version
   script:
+    - sed -i.bu "s|__REPOSITORY_URL__|${CI_PROJECT_URL}|g" package.json
     - npx semantic-release --dry-run --no-ci
     - if [ -s .VERSION ]; then cat .VERSION; else echo "0.0.0" > .VERSION; fi
     - !reference [.snippets, version]
@@ -30,18 +31,6 @@ version:
     paths:
       - .VERSION
     expire_in: 1 day
-  rules:
-    - if: '$CI_COMMIT_TAG'
-      when: never
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-
-tests:
-  image: $IMAGE_NODE
-  stage: tests
-  before_script:
-    - npm install
-  script:
-    - npm run test
   rules:
     - if: '$CI_COMMIT_TAG'
       when: never
@@ -59,6 +48,7 @@ build:
     - mkdir -p build
   script:
     - sed -i.bu "s/0\.0\.0/${VERSION}/g" package.json
+    - sed -i.bu "s|__REPOSITORY_URL__|${OS_REPOSITORY_URL}|g" package.json
     - npm run package
     - node_modules/.bin/vsce package --out build/vscode-central-remote-config-${VERSION}.vsix
   artifacts:
@@ -73,3 +63,5 @@ build:
 gitlab-release:
   dependencies:
     - build
+  before_script:
+    - sed -i.bu "s|__REPOSITORY_URL__|${CI_PROJECT_URL}|g" package.json
