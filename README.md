@@ -17,6 +17,7 @@ The **VSCode Central Remote Config extension** allows users to load and configur
 * Load configuration `<Config Label>` from the remote server `<Remote End Point>`.
 * Automatically replace placeholders `<Api Key Pattern>` in the configuration file with user-provided API key `<Api Key>`.
 * Edit settings and download remote configuration options from the status bar `CRC` icon.
+* The `CRC` icon comes now with a tick or a cross to help the user identify if the local configuration is up to date.
 
 ### Installation
 
@@ -95,3 +96,4 @@ This software is distributed under the MIT License, see the LICENSE.txt file for
 ## Contributors
 
 * FX Soubirou (Orange SA) - Initial work
+* Omar Oumlala (Orange SA) - Additional features
