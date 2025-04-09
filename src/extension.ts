@@ -202,7 +202,7 @@ function getContinueDirectory(config: vscode.WorkspaceConfiguration): string {
  * @returns {Promise<string>} Configuration data
  */
 async function fetchRemoteConfig(endpoint: string, label: string): Promise<string> {
-    const url = new URL(path.join(endpoint, label));
+    const url = new URL(label, endpoint);
     return new Promise<string>((resolve, reject) => {
         https.get(url, (response) => {
             if (response.statusCode !== 200) {
