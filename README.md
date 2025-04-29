@@ -35,7 +35,7 @@ The **VSCode Central Remote Config extension** allows users to load and configur
 | ------------------ | ----------------------------------------------------------------------------------------------------------- |
 | Remote End Point   | The remote end-point of the remote configuration file.                                                      |
 | Api Key            | The user API key that replaces the **Api Key Pattern** pattern in the remote configuration file. (Optional) |
-| Config Label       | The name of the remote configuration file. Default value: `default.json`.                                 |
+| Config Label       | The name of the remote configuration file. Default value: `default.yaml`.                                 |
 | Api Key Pattern    | The pattern to substitute in the remote configuration file. Default value: `__CRC_API_KEY__` .            |
 | Continue Directory | The configuration continue directory. Default value: `.continue`.                                         |
 
@@ -43,18 +43,17 @@ The **VSCode Central Remote Config extension** allows users to load and configur
 
 Example of a template remote configuration file:
 
-``` json
-{
-    "models": [
-      {
-        "title": "llama-3.2",
-        "provider": "ollama",
-        "apiBase": "https://model01.example.com:11434",
-        "apiKey": "__CRC_API_KEY__",
-        "model": "llama3.2:3b",
-        "completionOptions": {}
-      },
-      ...
+``` yaml
+
+  models:
+    - name: llama-3.2
+      provider: ollama
+      model: llama3.2:3b
+      apiBase: https://model01.example.com:11434
+      apiKey: __CRC_API_KEY__
+      roles:
+        - chat
+  ...
 ```
 
 ## Contributing

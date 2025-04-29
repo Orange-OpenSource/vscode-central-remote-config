@@ -53,9 +53,9 @@ const QUICK_PICK_OPTIONS = {
  * @property {string} DEFAULT - Default configuration file
  */
 const FILES = {
-    CONFIG: "config.json",
-    CONFIG_TMP: "config.json.tmp",
-    DEFAULT: "default.json"
+    CONFIG: "config.yaml",
+    CONFIG_TMP: "config.yaml.tmp",
+    DEFAULT: "default.yaml"
 };
 
 /**

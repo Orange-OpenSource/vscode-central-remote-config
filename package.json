@@ -31,7 +31,7 @@
         },
         "crc.configLabel": {
           "type": "string",
-          "default": "default.json",
+          "default": "default.yaml",
           "description": "The remote Continue configuration filename."
         },
         "crc.apiKey": {
