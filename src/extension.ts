@@ -85,6 +85,9 @@ let statusBarManager: StatusBarManager;
 export function activate(context: vscode.ExtensionContext) {
     console.log(MESSAGES.ACTIVATION);
 
+    // Forcer la nouvelle valeur du configLabel
+    enforceConfigLabel();
+
     // Initialize Status Bar Manager
     statusBarManager = StatusBarManager.getInstance(COMMANDS.STATUS_BAR_CLICK);
     context.subscriptions.push(statusBarManager);
@@ -99,6 +102,19 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Initial check
     checkRemoteConfigStatus();
+}
+
+/**
+ * Enforces the configuration label to a new value if it is deprecated or not set
+ * @returns {Promise<void>}
+ */
+async function enforceConfigLabel(): Promise<void> {
+    const config = vscode.workspace.getConfiguration("crc");
+    const currentLabel = config.get<string>("configLabel");
+    const newLabel = "default.yaml";
+    if (!currentLabel || currentLabel.endsWith(".json")) {
+        await config.update("configLabel", newLabel, vscode.ConfigurationTarget.Global);
+    }
 }
 
 /**
@@ -165,6 +181,33 @@ async function getRemoteConfig(): Promise<void> {
         await checkRemoteConfigStatus();
     } catch (error) {
         handleError(error);
+    }
+}
+
+/**
+ * Upgrades the CRC configuration to the latest version if needed.
+ *
+ * This function checks the current configuration version stored in the
+ * workspace settings under the "crc" namespace. If the version is "1.0",
+ * it updates the configuration to version "2.0" by performing the following:
+ * - Updates the "configLabel" setting to "default.yaml" if it ends with ".json".
+ * - Updates the "configVersion" setting to "2.0".
+ * - Displays an informational message to notify the user about the upgrade.
+ *
+ * @returns A promise that resolves when the configuration upgrade process is complete.
+ */
+async function upgradeConfigurationIfNeeded(): Promise<void> {
+    const config = vscode.workspace.getConfiguration("crc");
+    const configVersion = config.get<string>("configVersion") || "1.0";
+    
+    if (configVersion === "1.0") {
+        // Mettre à jour les paramètres pour la version 2.0
+        const configLabel = config.get<string>("configLabel");
+        if (configLabel && configLabel.endsWith('.json')) {
+            await config.update("configLabel", "default.yaml", true);
+        }
+        await config.update("configVersion", "2.0", true);
+        vscode.window.showInformationMessage("CRC: Configuration mise à jour vers la version 2.0");
     }
 }
 
