@@ -9,7 +9,7 @@
 # @links: [pre-commit](https://pre-commit.com/)
 # @license: MIT
 # @status: stable
-# @deprecated-tasks: file-utf8
+# @deprecated-tasks: file, file-utf8, file-cr, file-tws, file-nleof
 
 version: '3'
 

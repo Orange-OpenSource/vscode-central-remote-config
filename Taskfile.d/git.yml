@@ -21,10 +21,10 @@ vars:
 tasks:
 
   signed-commit:
-    desc: "Signed commit. Arguments: KEY_PATH|K=key_full_path MESSAGE|M=message [OPTION|O=\"--amend\"] [PULL|P=n|N] (*)"
+    desc: "Signed commit. Arguments: KEY_PATH|K=key_full_path MESSAGE|M=message [OPTION|O=\"--amend\"] [PULL|P=n|N] [UPDATE|U=n|N] (*)"
     summary: |
       [GIT] Signed commit.
-      Usage: task git:signed-commit KEY_PATH|K=<key_full_path> MESSAGE|M=<message> [OPTION|O=\"<options>\"] [PULL|P=<n|N>]
+      Usage: task git:signed-commit KEY_PATH|K=<key_full_path> MESSAGE|M=<message> [OPTION|O=\"<options>\"] [PULL|P=<n|N>] [UPDATE|U=n|N]
 
       Prerequisites:
         - Run command: git config user.name "your name"
@@ -37,6 +37,7 @@ tasks:
         MESSAGE  | M:  Commit message (required)
         OPTIONS  | O:  Git options (optional, by default -S --signoff)
         PULL     | P:  Pull docker image (optional, by default yes)
+        UPDATE   | U:  Update git repository from remote (optional, by default yes)
 
       Requirements:
         - docker
@@ -47,11 +48,14 @@ tasks:
       MESSAGE: '{{.MESSAGE | default .M}}'
       OPTIONS: '{{.OPTIONS | default .O | default "-S --signoff"}}'
       PULL: '{{.PULL | default .P}}'
+      UPDATE: '{{.UPDATE | default .U}}'
       KEY_PATH_DIR:
         sh: dirname "{{.KEY_PATH}}"
       KEY_NAME:
         sh: basename "{{.KEY_PATH}}"
     cmds:
+      - if [ "{{.UPDATE}}" != "n" ] && [ "{{.UPDATE}}" != "N" ]; then git remote update; fi
+      - if [ "{{.UPDATE}}" != "n" ] && [ "{{.UPDATE}}" != "N" ]; then if [ "$(git rev-parse HEAD)" = "$(git rev-parse @{u})" ]; then echo "Up to date"; else echo "Not up to date - git pull/fecth necessary" && exit 1; fi; fi
       - if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMAGE_DEFAULT}}"; fi
       - docker run {{.DOCKER_RUN_OPTS}} -d --name commit -v "{{.KEY_PATH_DIR}}:{{.KEY_MOUNT_POINT}}" -v $(pwd):"{{.SRC_MOUNT_POINT}}" "{{.IMAGE_DEFAULT}}" sleep infinity
       - defer: echo "Waiting for the container to stop..." && docker stop commit && docker rm commit
@@ -105,10 +109,10 @@ tasks:
     silent: true
 
   commitizen:
-    desc: "Signed commit with Commitizen. Arguments: KEY_PATH|K=key_full_path [PULL|P=n|N] (*)"
+    desc: "Signed commit with Commitizen. Arguments: KEY_PATH|K=key_full_path [PULL|P=n|N] [UPDATE|U=n|N] (*)"
     summary: |
       [GIT] Signed commit with Commitizen.
-      Usage: task git:commit KEY_PATH|K=<key_full_path> [PULL|P=<n|N>]
+      Usage: task git:commit KEY_PATH|K=<key_full_path> [PULL|P=<n|N>] [UPDATE|U=n|N]
 
       Prerequisites:
         - Run command: git config user.signingkey XXXX
@@ -117,6 +121,7 @@ tasks:
       Arguments:
         KEY_PATH | K:  Absolute path to the private key file (required)
         PULL     | P:  Pull docker image (optional, by default yes)
+        UPDATE   | U:  Update git repository from remote (optional, by default yes)
 
       Requirements:
         - docker
@@ -125,11 +130,14 @@ tasks:
       SRC_MOUNT_POINT: /data
       KEY_PATH: '{{.KEY_PATH | default .K}}'
       PULL: '{{.PULL | default .P}}'
+      UPDATE: '{{.UPDATE | default .U}}'
       KEY_PATH_DIR:
         sh: dirname "{{.KEY_PATH}}"
       KEY_NAME:
         sh: basename "{{.KEY_PATH}}"
     cmds:
+      - if [ "{{.UPDATE}}" != "n" ] && [ "{{.UPDATE}}" != "N" ]; then git remote update; fi
+      - if [ "{{.UPDATE}}" != "n" ] && [ "{{.UPDATE}}" != "N" ]; then if [ "$(git rev-parse HEAD)" = "$(git rev-parse @{u})" ]; then echo "Up to date"; else echo "Not up to date - git pull/fecth necessary" && exit 1; fi; fi
       - if [ "{{.PULL}}" != "n" ] && [ "{{.PULL}}" != "N" ]; then docker pull "{{.IMAGE_DEFAULT}}"; fi
       - docker run {{.DOCKER_RUN_OPTS}} -d --name commit -v "{{.KEY_PATH_DIR}}:{{.KEY_MOUNT_POINT}}" -v $(pwd):"{{.SRC_MOUNT_POINT}}" "{{.IMAGE_DEFAULT}}" sleep infinity
       - defer: echo "Waiting for the container to stop..." && docker stop commit && docker rm commit

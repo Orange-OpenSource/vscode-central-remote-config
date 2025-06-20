@@ -6,7 +6,7 @@
  * This software is distributed under the MIT License,
  * see the "LICENSE.txt" file for more details or https://spdx.org/licenses/MIT.html
  *
- * Authors: FX Soubirou - Orange SA; Omar Oumlala - Orange SA
+ * Authors: Oumlala Omar - Orange SA; Soubirou FX - Orange SA
  * Software description: An extension to set the configuration of
  * the Continue extension from a remote server.
  */
@@ -199,7 +199,7 @@ async function getRemoteConfig(): Promise<void> {
 async function upgradeConfigurationIfNeeded(): Promise<void> {
     const config = vscode.workspace.getConfiguration("crc");
     const configVersion = config.get<string>("configVersion") || "1.0";
-    
+
     if (configVersion === "1.0") {
         // Mettre à jour les paramètres pour la version 2.0
         const configLabel = config.get<string>("configLabel");
