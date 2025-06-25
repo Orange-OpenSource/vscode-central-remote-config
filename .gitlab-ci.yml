@@ -6,7 +6,7 @@ include:
 variables:
   IMAGE_NODE: node:22-bookworm
   IMAGE_NODE_GL_RELEASE: jfxs/commitizen-semantic-release:latest
-  OS_REPOSITORY_URL: https://github.com/fxsoubirou/vscode-central-remote-config
+  OS_REPOSITORY_URL: https://github.com/Orange-OpenSource/vscode-central-remote-config
 
 stages:
   - lint

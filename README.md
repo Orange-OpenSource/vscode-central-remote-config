@@ -1,6 +1,6 @@
 # VSCode Central Remote Configuration
 
-![Logo CRC](https://raw.githubusercontent.com/fxsoubirou/vsc-crc-media/refs/heads/main/crc_icon.png "Logo CRC")
+![Logo CRC](https://raw.githubusercontent.com/Orange-OpenSource/vscode-central-remote-config/main/crc_icon.png "Logo CRC")
 
 ## Overview
 
@@ -8,7 +8,7 @@
 
 The **VSCode Central Remote Config extension** allows users to load and configure their [Continue](https://www.continue.dev/) settings from a remote server. This extension provides a simple way to manage `~/.continue/config.json` Continue configuration file, replacing placeholders with user-provided API key.
 
-![CRC settings](https://raw.githubusercontent.com/fxsoubirou/vsc-crc-media/refs/heads/main/crc_settings.png "CRC Settings")
+![CRC settings](https://raw.githubusercontent.com/fxsoubirou/vsc-crc-media/main/crc_settings.png "CRC Settings")
 
 ### Features
 
