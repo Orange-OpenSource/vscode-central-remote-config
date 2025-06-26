@@ -23,8 +23,11 @@ version:
   image: $IMAGE_NODE_GL_RELEASE
   stage: version
   script:
-    - sed -i.bu "s|__REPOSITORY_URL__|${CI_PROJECT_URL}|g" package.json
-    - npx semantic-release --dry-run --no-ci
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        sed -i.bu "s|__REPOSITORY_URL__|${CI_PROJECT_URL}|g" package.json
+        npx semantic-release --dry-run --no-ci
+      fi
     - if [ -s .VERSION ]; then cat .VERSION; else echo "0.0.0" > .VERSION; fi
     - !reference [.snippets, version]
   artifacts:
