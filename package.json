@@ -11,7 +11,7 @@
   },
   "version": "0.0.0",
   "engines": {
-    "vscode": "^1.94.0"
+    "vscode": "^1.101.0"
   },
   "categories": [
     "Other"
@@ -73,17 +73,17 @@
     "test": "mocha"
   },
   "devDependencies": {
-    "@types/chai": "^5.0.1",
-    "@types/mocha": "^10.0.9",
-    "@types/node": "20.x",
-    "@types/vscode": "^1.94.0",
-    "@typescript-eslint/eslint-plugin": "^8.24.0",
-    "@typescript-eslint/parser": "^8.24.0",
+    "@types/chai": "^5.2.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "@types/vscode": "^1.101.0",
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
     "chai": "^5.2.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.25.5",
     "eslint": "^9.29.0",
-    "mocha": "^10.8.2",
-    "npm-run-all2": "5.0.0",
-    "typescript": "^5.6.2"
+    "mocha": "^11.7.1",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.8.3"
   }
 }

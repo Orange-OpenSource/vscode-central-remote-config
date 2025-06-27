@@ -82,9 +82,11 @@ Follow the [official documentation](https://code.visualstudio.com/api/working-wi
 
 ### Deployment
 
-* Reduce the extension size and improve the startup time by [bundling your extension](https://code.visualstudio.com/api/working-with-extensions/bundling-extension).
-* [Publish your extension](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) on the VS Code extension marketplace.
-* Automate builds by setting up [Continuous Integration](https://code.visualstudio.com/api/working-with-extensions/continuous-integration).
+* Push code to Gitlab
+* On new release, get vsix package from Gitlab releases page.
+* Push code to [Github](https://github.com/Orange-OpenSource/vscode-central-remote-config)
+* Publish extension to the [marketplace](https://marketplace.visualstudio.com/manage/publishers/orange-ospc)
+* Verify publication on the marketplace.
 
 ## License
 
